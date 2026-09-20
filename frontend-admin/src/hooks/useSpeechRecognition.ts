@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { SAME_LANGUAGE_ERROR } from '@/utils/constants';
 
 // TTS 播报函数
 const speakText = (text: string, lang: string) => {
@@ -300,6 +301,13 @@ export const useSpeechRecognition = () => {
         }
 
         if (final.trim()) {
+          // 相同语种不会发生转换，语音入口也不生成伪装成译文的原文
+          if (currentSourceLang === store.targetLang) {
+            store.setCurrentSubtitle('');
+            store.addToast('warning', SAME_LANGUAGE_ERROR);
+            return;
+          }
+
           // 检查识别结果是否符合源语言
           if (!isTextInLanguage(final, currentSourceLang)) {
             console.log('[语音识别] ⚠️ 语言不匹配，已忽略:', final);

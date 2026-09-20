@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Subtitles, Clock } from 'lucide-react';
+import { Subtitles, Clock, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { formatTime } from '@/utils/helpers';
 import { SubtitleItem } from './SubtitleItem';
@@ -8,6 +8,9 @@ export const SubtitleDisplay: React.FC = () => {
   const subtitles = useAppStore(state => state.subtitles);
   const currentSubtitle = useAppStore(state => state.currentSubtitle);
   const isMicOn = useAppStore(state => state.isMicOn);
+  const sourceLang = useAppStore(state => state.sourceLang);
+  const targetLang = useAppStore(state => state.targetLang);
+  const isSameLanguage = sourceLang === targetLang;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到底部
@@ -35,6 +38,15 @@ export const SubtitleDisplay: React.FC = () => {
           <span>{formatTime(new Date())}</span>
         </div>
       </header>
+
+      {isSameLanguage && (
+        <div className="flex items-start gap-2 mx-6 mt-4 p-3 bg-accent-yellow/10 border border-accent-yellow/30 rounded-lg flex-shrink-0">
+          <AlertCircle className="w-4 h-4 text-accent-yellow flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-dark-300 leading-relaxed">
+            源语言和目标语言相同，语音内容即使被识别也不会发生转换；请在左侧选择不同语种后再开始。
+          </p>
+        </div>
+      )}
 
       {/* 字幕内容区 */}
       <div
@@ -84,7 +96,7 @@ export const SubtitleDisplay: React.FC = () => {
                 isMicOn ? 'bg-accent-green animate-pulse' : 'bg-dark-600'
               }`}
             />
-            <span>{isMicOn ? '实时识别中' : '等待开始'}</span>
+            <span>{isSameLanguage ? '未转换：源语言和目标语言相同' : isMicOn ? '实时识别中' : '等待开始'}</span>
           </div>
         </div>
       </footer>

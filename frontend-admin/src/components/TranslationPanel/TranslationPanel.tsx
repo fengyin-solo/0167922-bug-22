@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Send, Languages, History, Copy, Check } from 'lucide-react';
+import { Send, Languages, History, Copy, Check, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui';
-import { MAX_INPUT_LENGTH, LANGUAGES } from '@/utils/constants';
+import { MAX_INPUT_LENGTH, LANGUAGES, SAME_LANGUAGE_ERROR } from '@/utils/constants';
 import { formatTime, getLanguageDisplayName } from '@/utils/helpers';
 
 // 检测文本是否主要是指定语言
@@ -117,11 +117,18 @@ export const TranslationPanel: React.FC = () => {
   }>>([]);
   const [localTranslating, setLocalTranslating] = useState(false);
 
+  const isSameLanguage = sourceLang === targetLang;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!inputText.trim()) {
       addToast('warning', '请输入要翻译的文本');
+      return;
+    }
+
+    if (isSameLanguage) {
+      addToast('warning', SAME_LANGUAGE_ERROR);
       return;
     }
 
@@ -197,12 +204,21 @@ export const TranslationPanel: React.FC = () => {
           <p className="text-xs text-dark-500">
             {getLanguageDisplayName(sourceLang, LANGUAGES)} →{' '}
             {getLanguageDisplayName(targetLang, LANGUAGES)}
+            {isSameLanguage && ' · 未发生转换'}
           </p>
         </div>
       </div>
 
       {/* 输入区域 */}
       <form onSubmit={handleSubmit} className="space-y-3">
+        {isSameLanguage && (
+          <div className="flex items-start gap-2 p-3 bg-accent-yellow/10 border border-accent-yellow/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-accent-yellow flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-dark-300 leading-relaxed">
+              {SAME_LANGUAGE_ERROR}当前结果会原样返回，因此已暂停发送，请先调整语种。
+            </p>
+          </div>
+        )}
         <div className="relative">
           <textarea
             value={inputText}
@@ -231,7 +247,7 @@ export const TranslationPanel: React.FC = () => {
           type="submit"
           variant="primary"
           loading={localTranslating || isTranslating}
-          disabled={!inputText.trim() || isOverLimit}
+          disabled={!inputText.trim() || isOverLimit || isSameLanguage}
           icon={<Send className="w-4 h-4" />}
           className="w-full"
         >

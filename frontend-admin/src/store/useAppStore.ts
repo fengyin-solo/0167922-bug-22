@@ -1,9 +1,53 @@
 import { create } from 'zustand';
 import type { AppState, ToastType, AudioSettings, SessionRecord } from '@/types';
 import { generateId } from '@/utils/helpers';
-import { DEFAULT_AUDIO_SETTINGS, TOAST_DURATION } from '@/utils/constants';
+import {
+  DEFAULT_AUDIO_SETTINGS,
+  LANGUAGES,
+  LANGUAGE_SETTINGS_STORAGE_KEY,
+  SAME_LANGUAGE_ERROR,
+  TOAST_DURATION,
+} from '@/utils/constants';
 
 const STORAGE_KEY = 'subtitle-translator-session-records';
+
+type StoredLanguageSettings = {
+  sourceLang?: string;
+  targetLang?: string;
+};
+
+const isSupportedLanguage = (lang: unknown): lang is string => (
+  typeof lang === 'string' && LANGUAGES.some(({ code }) => code === lang)
+);
+
+const loadLanguageSettingsFromStorage = (): Pick<AppState, 'sourceLang' | 'targetLang'> => {
+  const defaults = { sourceLang: 'zh-CN', targetLang: 'en-US' };
+
+  try {
+    const stored = localStorage.getItem(LANGUAGE_SETTINGS_STORAGE_KEY);
+    if (!stored) return defaults;
+
+    const parsed: StoredLanguageSettings = JSON.parse(stored);
+    return {
+      sourceLang: isSupportedLanguage(parsed.sourceLang) ? parsed.sourceLang : defaults.sourceLang,
+      targetLang: isSupportedLanguage(parsed.targetLang) ? parsed.targetLang : defaults.targetLang,
+    };
+  } catch {
+    console.error('Failed to load language settings from storage');
+    return defaults;
+  }
+};
+
+const saveLanguageSettingsToStorage = (sourceLang: string, targetLang: string) => {
+  try {
+    localStorage.setItem(
+      LANGUAGE_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ sourceLang, targetLang })
+    );
+  } catch {
+    console.error('Failed to save language settings to storage');
+  }
+};
 
 const loadRecordsFromStorage = (): SessionRecord[] => {
   try {
@@ -29,10 +73,12 @@ const saveRecordsToStorage = (records: SessionRecord[]) => {
   }
 };
 
+const initialLanguageSettings = loadLanguageSettingsFromStorage();
+
 export const useAppStore = create<AppState>((set, get) => ({
   // 控制面板状态
-  sourceLang: 'zh-CN',
-  targetLang: 'en-US',
+  sourceLang: initialLanguageSettings.sourceLang,
+  targetLang: initialLanguageSettings.targetLang,
   isMicOn: false,
   isRecording: false,
   audioSettings: DEFAULT_AUDIO_SETTINGS,
@@ -54,13 +100,39 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // Actions
   setSourceLang: (lang: string) => {
-    set({ sourceLang: lang });
-    get().addToast('info', `源语言已切换`);
+    const { sourceLang, targetLang } = get();
+    if (lang === sourceLang) return;
+
+    const willBeSameLanguage = lang === targetLang;
+    set({
+      sourceLang: lang,
+      ...(willBeSameLanguage ? { isMicOn: false, isRecording: false } : {}),
+    });
+    saveLanguageSettingsToStorage(lang, targetLang);
+
+    if (willBeSameLanguage) {
+      get().addToast('warning', SAME_LANGUAGE_ERROR);
+    } else {
+      get().addToast('info', '源语言已切换');
+    }
   },
-  
+
   setTargetLang: (lang: string) => {
-    set({ targetLang: lang });
-    get().addToast('info', `目标语言已切换`);
+    const { sourceLang, targetLang } = get();
+    if (lang === targetLang) return;
+
+    const willBeSameLanguage = lang === sourceLang;
+    set({
+      targetLang: lang,
+      ...(willBeSameLanguage ? { isMicOn: false, isRecording: false } : {}),
+    });
+    saveLanguageSettingsToStorage(sourceLang, lang);
+
+    if (willBeSameLanguage) {
+      get().addToast('warning', SAME_LANGUAGE_ERROR);
+    } else {
+      get().addToast('info', '目标语言已切换');
+    }
   },
   
   toggleMic: () => {
@@ -77,6 +149,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   addSubtitle: (original: string, translated: string) => {
     const { sourceLang, targetLang } = get();
+    if (sourceLang === targetLang) {
+      get().addToast('warning', SAME_LANGUAGE_ERROR);
+      return;
+    }
+
     set(state => ({
       subtitles: [
         ...state.subtitles.map(s => ({ ...s, isActive: false })),
@@ -114,7 +191,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       addToast('warning', '请输入要翻译的文本');
       return;
     }
-    
+
+    if (sourceLang === targetLang) {
+      addToast('warning', SAME_LANGUAGE_ERROR);
+      return;
+    }
+
     set({ isTranslating: true });
     
     try {

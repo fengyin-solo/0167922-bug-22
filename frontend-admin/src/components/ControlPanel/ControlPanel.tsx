@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { Select, Slider, Toggle, Button } from '@/components/ui';
-import { LANGUAGES } from '@/utils/constants';
+import { LANGUAGES, SAME_LANGUAGE_ERROR } from '@/utils/constants';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 
 export const ControlPanel: React.FC = () => {
@@ -32,9 +32,13 @@ export const ControlPanel: React.FC = () => {
     label: lang.nativeName,
   }));
 
+  const isSameLanguage = sourceLang === targetLang;
+  const languageError = isSameLanguage ? SAME_LANGUAGE_ERROR : undefined;
+
   // 检查浏览器是否支持语音识别
-  const isSpeechSupported = typeof window !== 'undefined' && 
+  const isSpeechSupported = typeof window !== 'undefined' &&
     (!!window.SpeechRecognition || !!(window as typeof window & { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition);
+  const isMicDisabled = !isSpeechSupported || isSameLanguage;
 
   return (
     <aside className="w-full h-full flex-shrink-0 glass-panel rounded-2xl p-6 flex flex-col gap-6 overflow-y-auto">
@@ -70,10 +74,10 @@ export const ControlPanel: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={toggleMic}
-              disabled={!isSpeechSupported}
+              disabled={isMicDisabled}
               className={`
                 p-4 rounded-xl transition-all duration-300
-                ${!isSpeechSupported 
+                ${isMicDisabled
                   ? 'bg-dark-800 text-dark-600 cursor-not-allowed'
                   : isMicOn
                     ? 'bg-accent-red/20 text-accent-red recording-indicator'
@@ -92,7 +96,11 @@ export const ControlPanel: React.FC = () => {
                 {isMicOn ? '录音中' : '已关闭'}
               </p>
               <p className="text-xs text-dark-500">
-                {isMicOn ? '正在识别语音...' : '点击开始录音'}
+                {isSameLanguage
+                  ? '源语言与目标语言相同'
+                  : isMicOn
+                    ? '正在识别语音...'
+                    : '点击开始录音'}
               </p>
             </div>
           </div>
@@ -104,7 +112,17 @@ export const ControlPanel: React.FC = () => {
           onChange={toggleMic}
           icon={<Activity className="w-4 h-4" />}
           activeColor="bg-accent-red"
+          disabled={isMicDisabled}
         />
+
+        {isSameLanguage && (
+          <div className="flex items-start gap-2 p-3 bg-accent-yellow/10 border border-accent-yellow/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-accent-yellow flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-dark-300 leading-relaxed">
+              源语言和目标语言相同，不会产生转换结果。请先选择不同语种，再开启语音识别。
+            </p>
+          </div>
+        )}
       </section>
 
       {/* 语言设置 */}
@@ -119,6 +137,7 @@ export const ControlPanel: React.FC = () => {
           value={sourceLang}
           options={languageOptions}
           onChange={setSourceLang}
+          error={languageError}
         />
 
 
@@ -127,6 +146,7 @@ export const ControlPanel: React.FC = () => {
           value={targetLang}
           options={languageOptions}
           onChange={setTargetLang}
+          error={languageError}
         />
       </section>
 

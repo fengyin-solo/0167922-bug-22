@@ -5,6 +5,10 @@ export const LANGUAGES: Language[] = [
   { code: 'en-US', name: 'English', nativeName: 'English' },
 ];
 
+export const LANGUAGE_SETTINGS_STORAGE_KEY = 'subtitle-translator-language-settings';
+
+export const SAME_LANGUAGE_ERROR = '源语言和目标语言不能相同：相同语种不会发生转换，请选择不同语种。';
+
 export const DEFAULT_AUDIO_SETTINGS = {
   volume: 80,
   speed: 1.0,
