@@ -257,6 +257,9 @@ export const SessionHistoryCenter: React.FC<{ onClose: () => void }> = ({ onClos
                                 </span>
                                 <span className="text-xs text-dark-600">
                                   {getLanguageDisplayName(record.sourceLang, LANGUAGES)} → {getLanguageDisplayName(record.targetLang, LANGUAGES)}
+                                  {record.sourceLang.split('-')[0] === record.targetLang.split('-')[0] && (
+                                    <span className="ml-1 text-accent-yellow">（未转换）</span>
+                                  )}
                                 </span>
                               </div>
                               <p className="text-sm text-dark-300 truncate mb-1">

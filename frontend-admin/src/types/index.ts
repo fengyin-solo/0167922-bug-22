@@ -12,6 +12,8 @@ export interface SubtitleEntry {
   translatedText: string;
   timestamp: Date;
   isActive: boolean;
+  // 源语言与目标语言相同、未发生转换时为 false
+  converted?: boolean;
 }
 
 // 翻译结果

@@ -15,6 +15,9 @@ export const MAX_INPUT_LENGTH = 500;
 
 export const TOAST_DURATION = 3000;
 
+// 语言设置在 localStorage 中的存储键（重新打开后保持上次选择）
+export const LANG_SETTINGS_STORAGE_KEY = 'subtitle-translator-lang-settings';
+
 // 模拟字幕数据
 export const MOCK_SUBTITLES = [
   {

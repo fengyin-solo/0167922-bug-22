@@ -41,6 +41,13 @@ export const SubtitleItem: React.FC<SubtitleItemProps> = ({ subtitle }) => {
           >
             {subtitle.translatedText}
           </p>
+
+          {/* 源/目标语言相同，未发生转换 */}
+          {subtitle.converted === false && (
+            <p className="text-xs text-accent-yellow">
+              未转换：源语言与目标语言相同，以上为原文，未发生翻译
+            </p>
+          )}
         </div>
 
         {/* 活跃指示器 */}

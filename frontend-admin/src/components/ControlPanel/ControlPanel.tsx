@@ -10,9 +10,10 @@ import {
   AlertCircle,
   Play,
 } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, isSameLanguage } from '@/store/useAppStore';
 import { Select, Slider, Toggle, Button } from '@/components/ui';
 import { LANGUAGES } from '@/utils/constants';
+import { getLanguageDisplayName } from '@/utils/helpers';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 
 export const ControlPanel: React.FC = () => {
@@ -128,6 +129,16 @@ export const ControlPanel: React.FC = () => {
           options={languageOptions}
           onChange={setTargetLang}
         />
+
+        {isSameLanguage(sourceLang, targetLang) && (
+          <div className="flex items-start gap-2 p-3 bg-accent-yellow/10 border border-accent-yellow/30 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-accent-yellow flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-dark-300 leading-relaxed">
+              源语言与目标语言同为「{getLanguageDisplayName(sourceLang, LANGUAGES)}
+              」，此组合不会发生任何翻译转换，识别/输入内容将原样显示。请将两个语言选择为不同语种。
+            </p>
+          </div>
+        )}
       </section>
 
       {/* 音频设置 - TTS语音播报 */}

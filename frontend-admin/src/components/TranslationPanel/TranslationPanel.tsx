@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Send, Languages, History, Copy, Check } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { Send, Languages, History, Copy, Check, AlertCircle } from 'lucide-react';
+import { useAppStore, isSameLanguage } from '@/store/useAppStore';
 import { Button } from '@/components/ui';
 import { MAX_INPUT_LENGTH, LANGUAGES } from '@/utils/constants';
 import { formatTime, getLanguageDisplayName } from '@/utils/helpers';
@@ -113,15 +113,25 @@ export const TranslationPanel: React.FC = () => {
     id: string;
     sourceText: string;
     targetText: string;
+    sourceLang: string;
+    targetLang: string;
     timestamp: Date;
   }>>([]);
   const [localTranslating, setLocalTranslating] = useState(false);
 
+  const sameLanguage = isSameLanguage(sourceLang, targetLang);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputText.trim()) {
       addToast('warning', '请输入要翻译的文本');
+      return;
+    }
+
+    // 同语种不会发生转换，不允许提交（正常路径已在语言设置处拦截）
+    if (sameLanguage) {
+      addToast('warning', '源语言与目标语言相同，不会产生翻译，请先选择不同的语言');
       return;
     }
 
@@ -133,16 +143,18 @@ export const TranslationPanel: React.FC = () => {
     }
 
     setLocalTranslating(true);
-    
+
     // 模拟翻译延迟
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     const translated = translateText(inputText, sourceLang, targetLang);
-    
+
     const newRecord = {
       id: Date.now().toString(),
       sourceText: inputText,
       targetText: translated,
+      sourceLang,
+      targetLang,
       timestamp: new Date(),
     };
     
@@ -201,6 +213,16 @@ export const TranslationPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* 同语种提示：该组合不会发生转换 */}
+      {sameLanguage && (
+        <div className="flex items-start gap-2 p-3 bg-accent-yellow/10 border border-accent-yellow/30 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-accent-yellow flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-dark-300 leading-relaxed">
+            源语言与目标语言相同，不会进行任何翻译转换。请在左侧控制面板选择不同的语言后再发送。
+          </p>
+        </div>
+      )}
+
       {/* 输入区域 */}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="relative">
@@ -231,7 +253,7 @@ export const TranslationPanel: React.FC = () => {
           type="submit"
           variant="primary"
           loading={localTranslating || isTranslating}
-          disabled={!inputText.trim() || isOverLimit}
+          disabled={!inputText.trim() || isOverLimit || sameLanguage}
           icon={<Send className="w-4 h-4" />}
           className="w-full"
         >
@@ -260,7 +282,9 @@ export const TranslationPanel: React.FC = () => {
               <p className="text-sm">暂无翻译记录</p>
             </div>
           ) : (
-            allHistory.map(item => (
+            allHistory.map(item => {
+              const notConverted = isSameLanguage(item.sourceLang, item.targetLang);
+              return (
               <div
                 key={item.id}
                 className="glass-card p-4 space-y-3 animate-fade-in"
@@ -284,7 +308,9 @@ export const TranslationPanel: React.FC = () => {
                 {/* 译文 */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-primary-400">译文</span>
+                    <span className={`text-xs ${notConverted ? 'text-accent-yellow' : 'text-primary-400'}`}>
+                      {notConverted ? '未转换（源/目标语言相同，内容为原文）' : '译文'}
+                    </span>
                     <button
                       onClick={() => handleCopy(item.targetText, item.id)}
                       className="p-1 hover:bg-white/5 rounded transition-colors"
@@ -302,7 +328,8 @@ export const TranslationPanel: React.FC = () => {
                   </p>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
